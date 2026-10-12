@@ -1,12 +1,26 @@
 import axios from "axios";
+declare global {
+  interface Window {
+    ALDEF_CONFIG?: { backendUrl?: string };
+  }
+}
+export const backendUrl = (
+  import.meta.env.DEV
+    ? (import.meta.env.VITE_BACKEND_URL ?? "")
+    : (window.ALDEF_CONFIG?.backendUrl ??
+      import.meta.env.VITE_BACKEND_URL ??
+      "")
+).replace(/\/+$/, "");
 export const api = axios.create({
-  baseURL: "/api/v1",
+  baseURL: `${backendUrl}/api/v1`,
   withCredentials: true,
   withXSRFToken: true,
   headers: { Accept: "application/json" },
 });
 export async function login(email: string, password: string) {
-  await axios.get("/sanctum/csrf-cookie", { withCredentials: true });
+  await axios.get(`${backendUrl}/sanctum/csrf-cookie`, {
+    withCredentials: true,
+  });
   return (await api.post("/login", { email, password })).data;
 }
 export const errorText = (error: unknown): string =>

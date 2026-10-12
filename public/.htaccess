@@ -1,0 +1,16 @@
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+    # Backend endpoints must never return the SPA index.html.
+    RewriteRule ^(?:api(?:/|$)|sanctum(?:/|$)|up$) - [L]
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+    RewriteRule ^ index.html [L]
+</IfModule>
+
+<IfModule mod_headers.c>
+    <FilesMatch "^(index\.html|config\.js)$">
+        Header set Cache-Control "no-cache, no-store, must-revalidate"
+    </FilesMatch>
+    Header set X-Content-Type-Options "nosniff"
+</IfModule>
