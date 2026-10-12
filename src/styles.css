@@ -1,0 +1,95 @@
+@import "tailwindcss";
+:root {
+  font-family: Inter, "Segoe UI", Arial, sans-serif;
+  color: #1d2b42;
+  background: #f4f6f9;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  font-size: 13px;
+  line-height: 1.5;
+}
+* {
+  box-sizing: border-box;
+}
+body {
+  margin: 0;
+}
+button,
+input,
+select,
+textarea {
+  font: inherit;
+}
+button,
+a,
+select {
+  touch-action: manipulation;
+}
+button:disabled {
+  cursor: not-allowed;
+  opacity: 0.5;
+}
+button {
+  cursor: pointer;
+  border: 0;
+}
+a {
+  color: inherit;
+  text-decoration: none;
+}
+h1,
+h2,
+h3,
+p {
+  margin: 0;
+}
+h1,
+h2,
+h3 {
+  color: #19283f;
+}
+input,
+select,
+textarea {
+  min-width: 0;
+  outline: none;
+}
+input:focus,
+select:focus,
+textarea:focus {
+  border-color: #1683e8 !important;
+  box-shadow: 0 0 0 3px #1683e81c;
+}
+button:focus-visible,
+a:focus-visible {
+  outline: 3px solid #8ecbff;
+  outline-offset: 3px;
+}
+input[type="checkbox"] {
+  accent-color: #1683e8;
+}
+input[type="file"] {
+  max-width: 100%;
+}
+.numeric {
+  font-variant-numeric: tabular-nums;
+}
+.mono {
+  font-family: "Cascadia Code", Consolas, monospace;
+  font-size: 11px;
+}
+.strong {
+  font-weight: 600;
+}
+.muted {
+  color: #8390a3;
+}
+.spin {
+  animation: spin 1s linear infinite;
+}
+@keyframes spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
