@@ -182,7 +182,7 @@ function Cell({ row, path }: { row: Row; path: string }) {
   );
 }
 function Login({ onLogin }: { onLogin: (s: Session) => void }) {
-  const [email, setEmail] = useState("admin@aldef.local");
+  const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [busy, setBusy] = useState(false);
   const [error, setError] = useState("");

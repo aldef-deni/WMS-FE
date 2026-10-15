@@ -181,6 +181,8 @@ describe("ALDEF workspace", () => {
     );
     render(<Workspace />);
     await screen.findByText("Masuk ke workspace");
+    expect(screen.getByLabelText("Email")).toHaveValue("");
+    await userEvent.type(screen.getByLabelText("Email"), "user@example.com");
     await userEvent.type(screen.getByLabelText("Password"), "invalid-password");
     await userEvent.click(
       screen.getByRole("button", { name: "Masuk workspace" }),
@@ -189,6 +191,6 @@ describe("ALDEF workspace", () => {
     expect(screen.getByRole("alert")).toHaveTextContent(
       "Email atau password tidak sesuai.",
     );
-    expect(login).toHaveBeenCalledWith("admin@aldef.local", "invalid-password");
+    expect(login).toHaveBeenCalledWith("user@example.com", "invalid-password");
   });
 });
