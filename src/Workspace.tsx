@@ -35,6 +35,7 @@ import {
   Check,
   ExternalLink,
   CirclePlay,
+  UserRound,
 } from "lucide-react";
 import { api, login, errorText, key, fmt, money, date, localDate } from "./api";
 import type { Row, Session } from "./api";
@@ -50,6 +51,7 @@ import {
 } from "./components";
 import type { Field } from "./components";
 import { modules, masterFields, actions, option, enums } from "./modules";
+import Profile, { Avatar } from "./Profile";
 import "./Workspace.css";
 import { Integrations, QueueExports, EmailSimulator } from "./Extras";
 const ActivityChart = lazy(() => import("./ActivityChart"));
@@ -95,6 +97,10 @@ const groups = [
       ["tariffs", "Tarif layanan", Receipt],
       ["integrations", "Integrasi lokal", Settings],
     ],
+  },
+  {
+    label: "AKUN",
+    items: [["profile", "Profil saya", UserRound]],
   },
   {
     label: "ADMINISTRASI",
@@ -203,13 +209,11 @@ function Login({ onLogin }: { onLogin: (s: Session) => void }) {
   return (
     <div className="login-layout">
       <div className="login-story">
-        <div className="brand">
-          <img src="/aldef-logo-2026.png" alt="Logo asli ALDEF Tech" />
-          <div>
-            <strong>
-              ALDEF<span>Fulfillment Center</span>
-            </strong>
-          </div>
+        <div className="login-logo">
+          <img
+            src="/aldef-fulfillment-center.png"
+            alt="ALDEF Fulfillment Center"
+          />
         </div>
         <div>
           <span className="eyebrow">YOUR FULFILLMENT, CONNECTED.</span>
@@ -235,12 +239,14 @@ function Login({ onLogin }: { onLogin: (s: Session) => void }) {
             </span>
           </div>
         </div>
-        <small>ALDEFTECH · OPERATIONS WORKSPACE</small>
+        <small>ALDEFTECH - FULFILLMENT CENTER OPERATIONS</small>
       </div>
       <div className="login-form">
         <div>
-          <span className="eyebrow">SELAMAT DATANG KEMBALI</span>
-          <h2>Masuk ke workspace</h2>
+          <span className="eyebrow">
+            SELAMAT DATANG DI ALDEF FULFILLMENT CENTER
+          </span>
+          <h2>Masuk ke Fulfillment Center</h2>
           <p>Gunakan akun operasional atau portal klien Anda.</p>
           <form onSubmit={submit}>
             <label>
@@ -274,7 +280,7 @@ function Login({ onLogin }: { onLogin: (s: Session) => void }) {
             </button>
             <button
               type="button"
-              className="secondary demo-login"
+              className="demo-login"
               disabled={busy}
               onClick={() => {
                 setEmail(DEMO_ACCOUNT.email);
@@ -286,7 +292,7 @@ function Login({ onLogin }: { onLogin: (s: Session) => void }) {
             </button>
           </form>
           <div className="local-note">
-            <span className="live-dot" /> Lingkungan lokal · Asia/Jakarta
+            <span className="live-dot" /> Aldef Tech · Asia/Jakarta
           </div>
         </div>
       </div>
@@ -415,7 +421,9 @@ export default function Workspace() {
       ? "Ringkasan Operasional"
       : page === "reports"
         ? "Laporan & Analitik"
-        : (modules[page]?.title ?? page);
+        : page === "profile"
+          ? "Profil Saya"
+          : (modules[page]?.title ?? page);
   const editable = modules[page]?.master
     ? can(
         ["users", "roles"].includes(page)
@@ -459,6 +467,7 @@ export default function Workspace() {
                 .filter(
                   ([id]) =>
                     id === "dashboard" ||
+                    id === "profile" ||
                     can(
                       id === "reports"
                         ? "reports.read"
@@ -483,13 +492,17 @@ export default function Workspace() {
           ))}
         </nav>
         <div className="sidebar-foot">
-          <div className="user-avatar">
-            {session.user.name.slice(0, 2).toUpperCase()}
-          </div>
-          <div>
-            <strong>{session.user.name}</strong>
-            <span>{session.user.roles[0]?.name}</span>
-          </div>
+          <button
+            className="sidebar-profile"
+            onClick={() => navigate("profile")}
+            aria-label="Buka profil saya"
+          >
+            <Avatar user={session.user} />
+            <div>
+              <strong>{session.user.name}</strong>
+              <span>{session.user.roles[0]?.name}</span>
+            </div>
+          </button>
           <button
             aria-label="Keluar"
             onClick={async () => {
@@ -543,9 +556,13 @@ export default function Workspace() {
               <Bell size={19} />
               {!!notifications.data?.data?.length && <i />}
             </button>
-            <div className="user-avatar small">
-              {session.user.name.slice(0, 2).toUpperCase()}
-            </div>
+            <button
+              className="avatar-button"
+              aria-label="Profil pengguna"
+              onClick={() => navigate("profile")}
+            >
+              <Avatar user={session.user} className="small" />
+            </button>
           </div>
           {notif && (
             <div className="notification-popover">
@@ -589,98 +606,110 @@ export default function Workspace() {
                   ? "Semua yang Anda butuhkan untuk menjaga operasional tetap berjalan."
                   : page === "reports"
                     ? "Evaluasi stok, aktivitas, kapasitas, dan pendapatan layanan."
-                    : modules[page]?.subtitle}
+                    : page === "profile"
+                      ? "Kelola informasi akun, foto profil, keamanan, dan aktivitas Anda."
+                      : modules[page]?.subtitle}
               </p>
             </div>
-            <div className="heading-actions">
-              <button
-                className="secondary"
-                onClick={() => changed("Data diperbarui.")}
-              >
-                <RefreshCw size={16} />
-                Refresh
-              </button>
-              {page === "dashboard" && can("order.write") && (
+            {page !== "profile" && (
+              <div className="heading-actions">
                 <button
-                  className="primary"
-                  onClick={() => setForm({ kind: "document:order" })}
+                  className="secondary"
+                  onClick={() => changed("Data diperbarui.")}
                 >
-                  <Plus size={17} />
-                  Buat pesanan
+                  <RefreshCw size={16} />
+                  Refresh
                 </button>
-              )}
-              {page !== "dashboard" &&
-                page !== "reports" &&
-                ((editable && modules[page]?.master) ||
-                  (editable && modules[page]?.type) ||
-                  (page === "invoices" && can("billing.write"))) && (
+                {page === "dashboard" && can("order.write") && (
                   <button
                     className="primary"
-                    onClick={() =>
-                      setForm({
-                        kind: modules[page]?.master
-                          ? "master:" + page
-                          : page === "invoices"
-                            ? "invoice"
-                            : "document:" + modules[page].type,
-                      })
-                    }
+                    onClick={() => setForm({ kind: "document:order" })}
                   >
                     <Plus size={17} />
-                    Buat{" "}
-                    {page === "order"
-                      ? "pesanan"
-                      : modules[page]?.master
-                        ? "data"
-                        : page === "invoices"
-                          ? "invoice"
-                          : "dokumen"}
+                    Buat pesanan
                   </button>
                 )}
-            </div>
+                {page !== "dashboard" &&
+                  page !== "reports" &&
+                  ((editable && modules[page]?.master) ||
+                    (editable && modules[page]?.type) ||
+                    (page === "invoices" && can("billing.write"))) && (
+                    <button
+                      className="primary"
+                      onClick={() =>
+                        setForm({
+                          kind: modules[page]?.master
+                            ? "master:" + page
+                            : page === "invoices"
+                              ? "invoice"
+                              : "document:" + modules[page].type,
+                        })
+                      }
+                    >
+                      <Plus size={17} />
+                      Buat{" "}
+                      {page === "order"
+                        ? "pesanan"
+                        : modules[page]?.master
+                          ? "data"
+                          : page === "invoices"
+                            ? "invoice"
+                            : "dokumen"}
+                    </button>
+                  )}
+              </div>
+            )}
           </div>
-          <div className="scope-bar">
-            <div>
-              <Warehouse size={17} />
-              <select
-                aria-label="Pilih gudang"
-                value={warehouse}
-                onChange={(e) => {
-                  setWarehouse(e.target.value);
-                  setDetail(null);
-                }}
-              >
-                <option value="">Semua gudang</option>
-                {refs.warehouses.map((w) => (
-                  <option key={w.id} value={w.id}>
-                    {w.name}
-                  </option>
-                ))}
-              </select>
-              <span className="scope-divider" />
-              <Users size={17} />
-              <select
-                aria-label="Pilih klien"
-                value={client}
-                onChange={(e) => {
-                  setClient(e.target.value);
-                  setDetail(null);
-                }}
-              >
-                <option value="">Semua klien</option>
-                {refs.clients.map((c) => (
-                  <option key={c.id} value={c.id}>
-                    {c.name}
-                  </option>
-                ))}
-              </select>
+          {page !== "profile" && (
+            <div className="scope-bar">
+              <div>
+                <Warehouse size={17} />
+                <select
+                  aria-label="Pilih gudang"
+                  value={warehouse}
+                  onChange={(e) => {
+                    setWarehouse(e.target.value);
+                    setDetail(null);
+                  }}
+                >
+                  <option value="">Semua gudang</option>
+                  {refs.warehouses.map((w) => (
+                    <option key={w.id} value={w.id}>
+                      {w.name}
+                    </option>
+                  ))}
+                </select>
+                <span className="scope-divider" />
+                <Users size={17} />
+                <select
+                  aria-label="Pilih klien"
+                  value={client}
+                  onChange={(e) => {
+                    setClient(e.target.value);
+                    setDetail(null);
+                  }}
+                >
+                  <option value="">Semua klien</option>
+                  {refs.clients.map((c) => (
+                    <option key={c.id} value={c.id}>
+                      {c.name}
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <span className="sync-label">
+                <span className="live-dot" />
+                Data operasional terhubung
+              </span>
             </div>
-            <span className="sync-label">
-              <span className="live-dot" />
-              Data operasional terhubung
-            </span>
-          </div>
-          {page === "dashboard" ? (
+          )}
+          {page === "profile" ? (
+            <Profile
+              session={session}
+              onSession={setSession}
+              onToast={setNotice}
+            />
+          ) : page === "dashboard" ? (
             <Dashboard
               data={dashboard.data}
               loading={dashboard.loading}
@@ -723,7 +752,7 @@ export default function Workspace() {
             <span>
               ALDEFTECH <span>·</span> Fulfillment made clear.
             </span>
-            <span>Asia/Jakarta · Lingkungan lokal</span>
+            <span>Asia/Jakarta</span>
           </footer>
         </main>
       </div>

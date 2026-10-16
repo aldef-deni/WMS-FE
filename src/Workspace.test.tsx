@@ -8,7 +8,14 @@ vi.mock("./api", async () => {
   const real = await vi.importActual<any>("./api");
   return {
     ...real,
-    api: { get: vi.fn(), post: vi.fn(), request: vi.fn() },
+    api: {
+      get: vi.fn(),
+      post: vi.fn(),
+      put: vi.fn(),
+      delete: vi.fn(),
+      request: vi.fn(),
+      defaults: { baseURL: "/api/v1" },
+    },
     login: vi.fn(),
   };
 });
@@ -180,7 +187,7 @@ describe("ALDEF workspace", () => {
       Error("Email atau password tidak sesuai."),
     );
     render(<Workspace />);
-    await screen.findByText("Masuk ke workspace");
+    await screen.findByText("Masuk ke Fulfillment Center");
     expect(screen.getByLabelText("Email")).toHaveValue("");
     await userEvent.type(screen.getByLabelText("Email"), "user@example.com");
     await userEvent.type(screen.getByLabelText("Password"), "invalid-password");
@@ -199,12 +206,100 @@ describe("ALDEF workspace", () => {
       return { data: [] } as any;
     });
     render(<Workspace />);
-    await screen.findByText("Masuk ke workspace");
+    await screen.findByText("Masuk ke Fulfillment Center");
     await userEvent.click(
       screen.getByRole("button", { name: "Coba akun demo" }),
     );
     expect(screen.getByLabelText("Email")).toHaveValue("demo@aldeftech.com");
     expect(screen.getByLabelText("Password")).toHaveValue("demo");
     expect(login).not.toHaveBeenCalledWith("demo@aldeftech.com", "demo");
+  });
+  it("shows the new login branding", async () => {
+    vi.mocked(api.get).mockImplementation(async (url: any) => {
+      if (url === "/me") throw Error("Unauthorized");
+      return { data: [] } as any;
+    });
+    render(<Workspace />);
+    await screen.findByText("SELAMAT DATANG DI ALDEF FULFILLMENT CENTER");
+    expect(screen.getByAltText("ALDEF Fulfillment Center")).toHaveAttribute(
+      "src",
+      "/aldef-fulfillment-center.png",
+    );
+    expect(
+      screen.getByText("ALDEFTECH - FULFILLMENT CENTER OPERATIONS"),
+    ).toBeInTheDocument();
+    expect(screen.getByText(/Aldef Tech · Asia\/Jakarta/)).toBeInTheDocument();
+    expect(screen.queryByText(/Lingkungan lokal/)).not.toBeInTheDocument();
+  });
+  it("edits the profile and uploads a profile photo", async () => {
+    const user = {
+      id: 1,
+      name: "Operator Demo",
+      email: "ops@example.com",
+      roles: [{ id: 1, name: "Super Admin" }],
+    };
+    mocks({ ...admin, user });
+    vi.mocked(api.put).mockResolvedValue({
+      data: {
+        ...admin,
+        user: { ...user, name: "Operator Baru", updated_at: "x" },
+      },
+    } as any);
+    vi.mocked(api.post).mockResolvedValue({
+      data: { ...admin, user: { ...user, avatar_url: "/avatars/1?v=abc" } },
+    } as any);
+    render(<Workspace />);
+    await screen.findByText("Selamat datang, Operator");
+    expect(screen.queryByText(/Lingkungan lokal/)).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Profil saya" }));
+    await screen.findByRole("tab", { name: /Informasi pribadi/ });
+    const name = screen.getByLabelText(/Nama lengkap/);
+    await userEvent.clear(name);
+    await userEvent.type(name, "Operator Baru");
+    await userEvent.type(screen.getByLabelText(/Jabatan/), "Supervisor");
+    await userEvent.click(
+      screen.getByRole("button", { name: /Simpan perubahan/ }),
+    );
+    await waitFor(() =>
+      expect(api.put).toHaveBeenCalledWith("/profile", {
+        name: "Operator Baru",
+        email: "ops@example.com",
+        phone: "",
+        job_title: "Supervisor",
+      }),
+    );
+    const photo = new File(["img"], "me.png", { type: "image/png" });
+    await userEvent.upload(screen.getByTestId("avatar-input"), photo);
+    await waitFor(() =>
+      expect(api.post).toHaveBeenCalledWith(
+        "/profile/avatar",
+        expect.any(FormData),
+      ),
+    );
+    expect(
+      (await screen.findAllByAltText("Foto profil Operator Demo"))[0],
+    ).toHaveAttribute("src", "/api/v1/avatars/1?v=abc");
+  });
+  it("locks email and password for the demo account", async () => {
+    mocks({
+      ...admin,
+      demo: true,
+      user: {
+        id: 9,
+        name: "Demo Super Admin",
+        email: "demo@aldeftech.com",
+        roles: [{ id: 1, name: "Super Admin" }],
+      },
+    });
+    render(<Workspace />);
+    await screen.findByText("Selamat datang, Demo");
+    await userEvent.click(screen.getByRole("button", { name: "Profil saya" }));
+    expect(await screen.findByLabelText(/^Email/)).toBeDisabled();
+    expect(screen.getByText("akun demo")).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("tab", { name: /Keamanan/ }));
+    expect(screen.getByLabelText(/Password saat ini/)).toBeDisabled();
+    expect(
+      screen.getByRole("button", { name: /Ganti password/ }),
+    ).toBeDisabled();
   });
 });

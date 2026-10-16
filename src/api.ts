@@ -62,4 +62,5 @@ export type Session = {
   user: Row;
   permissions: string[];
   super_admin: boolean;
+  demo?: boolean;
 };
