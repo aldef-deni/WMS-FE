@@ -193,4 +193,18 @@ describe("ALDEF workspace", () => {
     );
     expect(login).toHaveBeenCalledWith("user@example.com", "invalid-password");
   });
+  it("fills the demo account credentials from the demo button", async () => {
+    vi.mocked(api.get).mockImplementation(async (url: any) => {
+      if (url === "/me") throw Error("Unauthorized");
+      return { data: [] } as any;
+    });
+    render(<Workspace />);
+    await screen.findByText("Masuk ke workspace");
+    await userEvent.click(
+      screen.getByRole("button", { name: "Coba akun demo" }),
+    );
+    expect(screen.getByLabelText("Email")).toHaveValue("demo@aldeftech.com");
+    expect(screen.getByLabelText("Password")).toHaveValue("demo");
+    expect(login).not.toHaveBeenCalledWith("demo@aldeftech.com", "demo");
+  });
 });

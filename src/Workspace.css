@@ -1319,6 +1319,11 @@ td svg {
   margin-top: 8px;
   padding: 12px 16px;
 }
+.login-form .demo-login {
+  width: 100%;
+  margin-top: -8px;
+  padding: 12px 16px;
+}
 .local-note {
   display: flex;
   gap: 8px;

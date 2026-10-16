@@ -34,6 +34,7 @@ import {
   X,
   Check,
   ExternalLink,
+  CirclePlay,
 } from "lucide-react";
 import { api, login, errorText, key, fmt, money, date, localDate } from "./api";
 import type { Row, Session } from "./api";
@@ -181,6 +182,7 @@ function Cell({ row, path }: { row: Row; path: string }) {
     </span>
   );
 }
+const DEMO_ACCOUNT = { email: "demo@aldeftech.com", password: "demo" };
 function Login({ onLogin }: { onLogin: (s: Session) => void }) {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
@@ -269,6 +271,18 @@ function Login({ onLogin }: { onLogin: (s: Session) => void }) {
             <button className="primary" disabled={busy}>
               {busy ? "Memverifikasi…" : "Masuk workspace"}
               <ArrowUpRight size={18} />
+            </button>
+            <button
+              type="button"
+              className="secondary demo-login"
+              disabled={busy}
+              onClick={() => {
+                setEmail(DEMO_ACCOUNT.email);
+                setPassword(DEMO_ACCOUNT.password);
+                setError("");
+              }}
+            >
+              <CirclePlay size={18} /> Coba akun demo
             </button>
           </form>
           <div className="local-note">
