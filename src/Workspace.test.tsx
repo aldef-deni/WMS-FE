@@ -280,6 +280,156 @@ describe("ALDEF workspace", () => {
       (await screen.findAllByAltText("Foto profil Operator Demo"))[0],
     ).toHaveAttribute("src", "/api/v1/avatars/1?v=abc");
   });
+  it("traces a batch from receiving to the customer shipment", async () => {
+    const trace = {
+      query: "LOT-26-10",
+      matched_by: ["batch"],
+      products: [
+        { id: 1, sku: "SKU-A", name: "Product A" },
+        { id: 2, sku: "SKU-B", name: "Product B" },
+      ],
+      summary: {
+        received: 10,
+        on_hand: 7,
+        reserved: 1,
+        dispatched: 3,
+        returned: 0,
+        locations: 1,
+      },
+      positions: [
+        {
+          id: 5,
+          product: { id: 1, sku: "SKU-A", name: "Product A" },
+          warehouse: "Warehouse A",
+          location: "A-01-01",
+          batch: "LOT-26-10",
+          serial: "",
+          condition: "sellable",
+          quantity: 7,
+          reserved: 1,
+        },
+        {
+          id: 6,
+          product: { id: 1, sku: "SKU-A", name: "Product A" },
+          warehouse: "Warehouse A",
+          location: "RCV-01",
+          batch: "LOT-26-10",
+          serial: "",
+          condition: "sellable",
+          quantity: 0,
+          reserved: 0,
+        },
+      ],
+      timeline: [
+        {
+          id: 9,
+          event: "dispatch",
+          quantity_delta: -3,
+          reserved_delta: -3,
+          sku: "SKU-A",
+          batch: "LOT-26-10",
+          location: "STG-01",
+          warehouse: "Warehouse A",
+          created_at: "2026-10-16T03:00:00+00:00",
+          user: "Shipping Staff",
+          document: { id: 44, number: "ALDEF-ORDER-1", type: "order" },
+        },
+        {
+          id: 1,
+          event: "receiving",
+          quantity_delta: 10,
+          reserved_delta: 0,
+          sku: "SKU-A",
+          batch: "LOT-26-10",
+          location: "RCV-01",
+          warehouse: "Warehouse A",
+          created_at: "2026-10-15T03:00:00+00:00",
+          user: "Inbound Staff",
+          document: { id: 40, number: "ALDEF-INBOUND-1", type: "inbound" },
+        },
+      ],
+      timeline_total: 2,
+      documents: [
+        {
+          id: 44,
+          number: "ALDEF-ORDER-1",
+          type: "order",
+          status: "dispatched",
+          recipient: "Sinta Maharani",
+          address: "Bandung",
+          courier: "JNE",
+          tracking_number: "JNE123456",
+          quantity: 3,
+          dispatched: 3,
+        },
+      ],
+    };
+    mocks();
+    const base = vi.mocked(api.get).getMockImplementation()!;
+    vi.mocked(api.get).mockImplementation(async (url: any) =>
+      String(url).startsWith("/trace")
+        ? ({ data: { data: trace } } as any)
+        : String(url) === "/documents/44"
+          ? ({
+              data: {
+                data: {
+                  id: 44,
+                  number: "ALDEF-ORDER-1",
+                  type: "order",
+                  status: "dispatched",
+                  lines: [],
+                  meta: {},
+                },
+              },
+            } as any)
+          : base(url),
+    );
+    render(<Workspace />);
+    await screen.findByText("Selamat datang, Operator");
+    await userEvent.click(screen.getByRole("button", { name: "Lacak barang" }));
+    await userEvent.type(
+      screen.getByLabelText("Kode yang dilacak"),
+      "LOT-26-10{enter}",
+    );
+    await screen.findByText("Cocok dengan Batch / lot");
+    await waitFor(() =>
+      expect(api.get).toHaveBeenCalledWith("/trace?q=LOT-26-10"),
+    );
+    expect(screen.getByText("Diserahkan ke kurir")).toBeInTheDocument();
+    expect(screen.getByText("Diterima di gudang")).toBeInTheDocument();
+    expect(screen.getByText("Sinta Maharani")).toBeInTheDocument();
+    expect(screen.getByText("JNE123456")).toBeInTheDocument();
+    expect(screen.getByText("A-01-01")).toBeInTheDocument();
+    expect(screen.queryByText("RCV-01", { selector: "strong" })).toBeNull();
+    await userEvent.click(
+      screen.getByRole("button", { name: "Tampilkan 1 saldo kosong" }),
+    );
+    expect(
+      screen.getByText("RCV-01", { selector: "strong" }),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /SKU-B/ }));
+    await waitFor(() =>
+      expect(api.get).toHaveBeenCalledWith("/trace?q=LOT-26-10&product_id=2"),
+    );
+    await userEvent.click(
+      (await screen.findAllByRole("button", { name: "ALDEF-ORDER-1" }))[0],
+    );
+    await waitFor(() => expect(api.get).toHaveBeenCalledWith("/documents/44"));
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+  });
+  it("hints that orders can be searched by tracking number and recipient", async () => {
+    render(<Workspace />);
+    await screen.findByText("Selamat datang, Operator");
+    expect(
+      screen.getByPlaceholderText("Cari pesanan, resi, penerima…"),
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: "Pesanan" }));
+    expect(
+      await screen.findByPlaceholderText(
+        "Cari nomor, resi, penerima, atau SKU…",
+      ),
+    ).toBeInTheDocument();
+  });
   it("locks email and password for the demo account", async () => {
     mocks({
       ...admin,

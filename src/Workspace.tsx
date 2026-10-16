@@ -36,6 +36,7 @@ import {
   ExternalLink,
   CirclePlay,
   UserRound,
+  ScanSearch,
 } from "lucide-react";
 import { api, login, errorText, key, fmt, money, date, localDate } from "./api";
 import type { Row, Session } from "./api";
@@ -52,6 +53,7 @@ import {
 import type { Field } from "./components";
 import { modules, masterFields, actions, option, enums } from "./modules";
 import Profile, { Avatar } from "./Profile";
+import Trace from "./Trace";
 import "./Workspace.css";
 import { Integrations, QueueExports, EmailSimulator } from "./Extras";
 const ActivityChart = lazy(() => import("./ActivityChart"));
@@ -62,6 +64,7 @@ const groups = [
       ["dashboard", "Ringkasan", LayoutDashboard],
       ["inbound", "Inbound", ArrowDownToLine],
       ["inventory", "Persediaan", Package],
+      ["trace", "Lacak barang", ScanSearch],
       ["order", "Pesanan", ClipboardList],
     ],
   },
@@ -410,6 +413,17 @@ export default function Workspace() {
       setNotice(errorText(e));
     }
   }
+  async function openDocument(doc: Row) {
+    // Document types map to their list pages; the drawer needs the page set first.
+    const target = modules[doc.type]?.type === doc.type ? doc.type : "order";
+    try {
+      const full = (await api.get("/documents/" + doc.id)).data.data;
+      navigate(target);
+      setDetail(full);
+    } catch (e) {
+      setNotice(errorText(e));
+    }
+  }
   function changed(text = "Perubahan berhasil disimpan.") {
     setRevision((v) => v + 1);
     setNotice(text);
@@ -423,7 +437,9 @@ export default function Workspace() {
         ? "Laporan & Analitik"
         : page === "profile"
           ? "Profil Saya"
-          : (modules[page]?.title ?? page);
+          : page === "trace"
+            ? "Lacak Barang"
+            : (modules[page]?.title ?? page);
   const editable = modules[page]?.master
     ? can(
         ["users", "roles"].includes(page)
@@ -471,7 +487,9 @@ export default function Workspace() {
                     can(
                       id === "reports"
                         ? "reports.read"
-                        : (modules[String(id)]?.permission ?? "none"),
+                        : id === "trace"
+                          ? "inventory.read"
+                          : (modules[String(id)]?.permission ?? "none"),
                     ),
                 )
                 .map(([id, label, Icon]) => {
@@ -538,7 +556,7 @@ export default function Workspace() {
             <div className="top-search">
               <Search size={16} />
               <input
-                placeholder="Cari pesanan…"
+                placeholder="Cari pesanan, resi, penerima…"
                 aria-label="Pencarian pesanan"
                 value={globalSearch}
                 onChange={(e) => {
@@ -608,7 +626,9 @@ export default function Workspace() {
                     ? "Evaluasi stok, aktivitas, kapasitas, dan pendapatan layanan."
                     : page === "profile"
                       ? "Kelola informasi akun, foto profil, keamanan, dan aktivitas Anda."
-                      : modules[page]?.subtitle}
+                      : page === "trace"
+                        ? "Telusuri serial number, batch/lot, SKU, atau barcode dari penerimaan hingga pengiriman ke pelanggan."
+                        : modules[page]?.subtitle}
               </p>
             </div>
             {page !== "profile" && (
@@ -709,6 +729,8 @@ export default function Workspace() {
               onSession={setSession}
               onToast={setNotice}
             />
+          ) : page === "trace" ? (
+            <Trace filters={filters} onOpenDocument={openDocument} />
           ) : page === "dashboard" ? (
             <Dashboard
               data={dashboard.data}
@@ -1256,7 +1278,13 @@ function DataPage({
               setSearch(s);
               setPage(1);
             }}
-            placeholder="Cari nama atau nomor dokumen…"
+            placeholder={
+              config.type === "order"
+                ? "Cari nomor, resi, penerima, atau SKU…"
+                : config.type
+                  ? "Cari nomor dokumen atau SKU…"
+                  : "Cari nama atau nomor dokumen…"
+            }
           />
           {(config.type || config.master) && (
             <select
